@@ -1,0 +1,34 @@
+# Source files
+src/
+tsconfig.json
+jest.config.js
+
+# Development files
+examples/
+specs.md
+.git/
+.gitignore
+
+# Build artifacts
+node_modules/
+*.log
+*.tgz
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+coverage/
+
+# Development dependencies
+package-lock.json
+yarn.lock
