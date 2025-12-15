@@ -33,21 +33,21 @@ import { SanitizationModule } from 'sanitizationjs';
         rules: ['html', 'script', 'xss', 'trim'],
         customRules: [],
         strictMode: false,
-        logViolations: true
+        logViolations: true,
       },
       normalization: {
         enabled: true,
         format: 'standard',
         includeMetadata: true,
-        errorFormat: 'standard'
+        errorFormat: 'standard',
       },
       performance: {
         enableCaching: true,
         maxCacheSize: 1000,
-        enableMetrics: true
-      }
-    })
-  ]
+        enableMetrics: true,
+      },
+    }),
+  ],
 })
 export class AppModule {}
 ```
@@ -60,7 +60,6 @@ import { Sanitize, Normalize } from 'sanitizationjs';
 
 @Controller('users')
 export class UsersController {
-  
   @Post()
   @Sanitize({ rules: ['html', 'trim', 'email-normalize'] })
   @Normalize({ format: 'detailed', includeLinks: true })
@@ -74,29 +73,33 @@ export class UsersController {
 
 ```typescript
 import express from 'express';
-import { 
-  createSanitizationMiddleware, 
-  createNormalizationMiddleware 
+import {
+  createSanitizationMiddleware,
+  createNormalizationMiddleware,
 } from 'sanitizationjs/express';
 
 const app = express();
 
 // Apply sanitization middleware
-app.use(createSanitizationMiddleware({
-  enabled: true,
-  rules: ['html', 'script', 'xss', 'trim'],
-  customRules: [],
-  strictMode: false,
-  logViolations: true
-}));
+app.use(
+  createSanitizationMiddleware({
+    enabled: true,
+    rules: ['html', 'script', 'xss', 'trim'],
+    customRules: [],
+    strictMode: false,
+    logViolations: true,
+  })
+);
 
 // Apply normalization middleware
-app.use(createNormalizationMiddleware({
-  enabled: true,
-  format: 'standard',
-  includeMetadata: true,
-  errorFormat: 'standard'
-}));
+app.use(
+  createNormalizationMiddleware({
+    enabled: true,
+    format: 'standard',
+    includeMetadata: true,
+    errorFormat: 'standard',
+  })
+);
 ```
 
 ## Configuration
@@ -104,6 +107,7 @@ app.use(createNormalizationMiddleware({
 ### Sanitization Rules
 
 Built-in rules include:
+
 - `html` - Removes HTML tags
 - `script` - Removes script tags
 - `xss` - Removes XSS attack vectors
@@ -121,15 +125,16 @@ Built-in rules include:
 const customRule: SanitizationRule = {
   name: 'creditCard',
   pattern: /^\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}$/,
-  transform: (value) => value.replace(/\\s/g, ''),
-  validate: (value) => luhnCheck(value),
-  description: 'Normalizes and validates credit card numbers'
+  transform: value => value.replace(/\\s/g, ''),
+  validate: value => luhnCheck(value),
+  description: 'Normalizes and validates credit card numbers',
 };
 ```
 
 ### Response Formats
 
 #### Success Response
+
 ```json
 {
   "success": true,
@@ -148,6 +153,7 @@ const customRule: SanitizationRule = {
 ```
 
 #### Error Response
+
 ```json
 {
   "success": false,
@@ -179,12 +185,12 @@ export const productionConfig = {
   sanitization: {
     strictMode: true,
     logViolations: true,
-    rejectOnViolation: true
+    rejectOnViolation: true,
   },
   normalization: {
     includeDebugInfo: false,
-    compressResponses: true
-  }
+    compressResponses: true,
+  },
 };
 ```
 
@@ -199,6 +205,7 @@ app.useGlobalInterceptors(new NormalizationInterceptor(config));
 ## Security
 
 This package provides protection against:
+
 - Cross-Site Scripting (XSS)
 - SQL Injection
 - HTML Injection

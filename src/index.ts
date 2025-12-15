@@ -1,8 +1,8 @@
-export * from "./types";
-export * from "./core";
-export * from "./nestjs";
-export * from "./express";
-export * from "./decorators";
+export * from './types';
+export * from './core';
+export * from './nestjs';
+export * from './express';
+export * from './decorators';
 
 export {
   SanitizationModuleConfig,
@@ -19,16 +19,16 @@ export {
   NormalizationOptions,
   SecurityViolationType,
   SecurityViolation,
-} from "./types";
+} from './types';
 
-export { DEFAULT_SANITIZATION_RULES } from "./core/sanitization-rules";
+export { DEFAULT_SANITIZATION_RULES } from './core/sanitization-rules';
 
-import { SanitizationModuleConfig } from "./types";
+import { SanitizationModuleConfig } from './types';
 
 export const DEFAULT_CONFIG: SanitizationModuleConfig = {
   sanitization: {
     enabled: true,
-    rules: ["html", "script", "xss", "trim"],
+    rules: ['html', 'script', 'xss', 'trim'],
     customRules: [],
     strictMode: false,
     logViolations: true,
@@ -36,9 +36,9 @@ export const DEFAULT_CONFIG: SanitizationModuleConfig = {
   },
   normalization: {
     enabled: true,
-    format: "standard",
+    format: 'standard',
     includeMetadata: true,
-    errorFormat: "standard",
+    errorFormat: 'standard',
     includeDebugInfo: false,
     compressResponses: false,
     includeLinks: false,

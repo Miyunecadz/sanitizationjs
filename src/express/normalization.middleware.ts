@@ -5,8 +5,8 @@ import { NormalizationConfig, RequestContext, PaginationMeta } from '../types';
 export interface ExpressNormalizationOptions {
   autoDetectPagination?: boolean;
   extractRequestId?: (req: Request) => string;
-  extractMetadata?: (req: Request, res: Response) => Record<string, any>;
-  onError?: (error: any, req: Request, res: Response) => void;
+  extractMetadata?: (req: Request, res: Response) => Record<string, unknown>;
+  onError?: (error: unknown, req: Request, res: Response) => void;
 }
 
 export function createNormalizationMiddleware(
@@ -14,12 +14,12 @@ export function createNormalizationMiddleware(
   options: ExpressNormalizationOptions = {}
 ) {
   const normalizationEngine = new NormalizationEngine(config);
-  
+
   const {
     autoDetectPagination = true,
     extractRequestId,
     extractMetadata,
-    onError
+    onError,
   } = options;
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -32,31 +32,32 @@ export function createNormalizationMiddleware(
     const startTime = Date.now();
 
     const createRequestContext = (): RequestContext => ({
-      requestId: extractRequestId ? extractRequestId(req) : 
-                 (req.headers['x-request-id'] as string || 
-                  req.headers['x-correlation-id'] as string ||
-                  normalizationEngine.createRequestContext().requestId),
+      requestId: extractRequestId
+        ? extractRequestId(req)
+        : (req.headers['x-request-id'] as string) ||
+          (req.headers['x-correlation-id'] as string) ||
+          normalizationEngine.createRequestContext().requestId,
       timestamp: new Date(),
       startTime,
       userAgent: req.get('User-Agent'),
-      ip: req.ip || req.connection.remoteAddress || 'unknown'
+      ip: req.ip || req.connection.remoteAddress || 'unknown',
     });
 
-    res.send = function(data: any) {
+    res.send = function (data: unknown) {
       if (res.headersSent) {
         return originalSend.call(this, data);
       }
 
       try {
         const context = createRequestContext();
-        
+
         if (res.statusCode >= 400) {
           const errorResponse = normalizationEngine.normalizeError(
             typeof data === 'string' ? { message: data } : data,
             context,
             `HTTP_${res.statusCode}`
           );
-          
+
           res.set('Content-Type', 'application/json');
           return originalSend.call(this, JSON.stringify(errorResponse));
         }
@@ -86,10 +87,9 @@ export function createNormalizationMiddleware(
 
         res.set('Content-Type', 'application/json');
         return originalSend.call(this, JSON.stringify(successResponse));
-
       } catch (error) {
         console.error('Normalization middleware error:', error);
-        
+
         if (onError) {
           onError(error, req, res);
         }
@@ -98,21 +98,21 @@ export function createNormalizationMiddleware(
       }
     };
 
-    res.json = function(data: any) {
+    res.json = function (data: unknown) {
       if (res.headersSent) {
         return originalJson.call(this, data);
       }
 
       try {
         const context = createRequestContext();
-        
+
         if (res.statusCode >= 400) {
           const errorResponse = normalizationEngine.normalizeError(
             data,
             context,
             `HTTP_${res.statusCode}`
           );
-          
+
           return originalJson.call(this, errorResponse);
         }
 
@@ -132,10 +132,9 @@ export function createNormalizationMiddleware(
         );
 
         return originalJson.call(this, successResponse);
-
       } catch (error) {
         console.error('Normalization middleware error:', error);
-        
+
         if (onError) {
           onError(error, req, res);
         }
@@ -148,35 +147,48 @@ export function createNormalizationMiddleware(
   };
 }
 
-function isAlreadyNormalized(data: any): boolean {
-  return data && 
-         typeof data === 'object' && 
-         'success' in data && 
-         'metadata' in data &&
-         'requestId' in (data.metadata || {});
+function isAlreadyNormalized(data: unknown): boolean {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+  const dataObj = data as Record<string, unknown>;
+  return (
+    'success' in dataObj &&
+    'metadata' in dataObj &&
+    typeof dataObj.metadata === 'object' &&
+    dataObj.metadata !== null &&
+    'requestId' in (dataObj.metadata as Record<string, unknown>)
+  );
 }
 
-function extractPagination(data: any): PaginationMeta | undefined {
+function extractPagination(data: unknown): PaginationMeta | undefined {
   if (!data || typeof data !== 'object') {
     return undefined;
   }
 
-  if (data.pagination) {
-    return data.pagination;
+  const dataObj = data as Record<string, unknown>;
+
+  if (dataObj.pagination) {
+    return dataObj.pagination as PaginationMeta;
   }
 
-  const hasPageInfo = data.page !== undefined || 
-                     data.limit !== undefined || 
-                     data.total !== undefined;
+  const hasPageInfo =
+    dataObj.page !== undefined ||
+    dataObj.limit !== undefined ||
+    dataObj.total !== undefined;
 
   if (hasPageInfo) {
     return {
-      page: data.page || 1,
-      limit: data.limit || 10,
-      total: data.total || 0,
-      totalPages: data.totalPages || Math.ceil((data.total || 0) / (data.limit || 10)),
-      hasNext: data.hasNext || false,
-      hasPrev: data.hasPrev || false
+      page: (dataObj.page as number) || 1,
+      limit: (dataObj.limit as number) || 10,
+      total: (dataObj.total as number) || 0,
+      totalPages:
+        (dataObj.totalPages as number) ||
+        Math.ceil(
+          ((dataObj.total as number) || 0) / ((dataObj.limit as number) || 10)
+        ),
+      hasNext: (dataObj.hasNext as boolean) || false,
+      hasPrev: (dataObj.hasPrev as boolean) || false,
     };
   }
 
@@ -203,26 +215,36 @@ export class ExpressNormalizationMiddleware {
   }
 
   createErrorHandler() {
-    return (error: any, req: Request, res: Response, next: NextFunction) => {
+    return (
+      error: unknown,
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => {
       if (res.headersSent) {
         return next(error);
       }
 
       const context: RequestContext = {
-        requestId: req.headers['x-request-id'] as string || 'unknown',
+        requestId: (req.headers['x-request-id'] as string) || 'unknown',
         timestamp: new Date(),
         startTime: Date.now(),
         userAgent: req.get('User-Agent'),
-        ip: req.ip || req.connection.remoteAddress || 'unknown'
+        ip: req.ip || req.connection.remoteAddress || 'unknown',
       };
 
+      const errorObj = error as Record<string, unknown>;
       const errorResponse = this.normalizationEngine.normalizeError(
         error,
         context,
-        error.code || 'INTERNAL_ERROR'
+        (errorObj.code as string) || 'INTERNAL_ERROR'
       );
 
-      res.status(error.status || error.statusCode || 500).json(errorResponse);
+      res
+        .status(
+          (errorObj.status as number) || (errorObj.statusCode as number) || 500
+        )
+        .json(errorResponse);
     };
   }
 }
