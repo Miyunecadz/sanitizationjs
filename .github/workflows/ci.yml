@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
 
     strategy:
       matrix:
@@ -44,7 +44,7 @@ jobs:
         name: codecov-umbrella
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: test
 
     steps:
@@ -67,7 +67,7 @@ jobs:
       run: npm pack --dry-run
 
   security:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
 
     steps:
     - name: Checkout code
