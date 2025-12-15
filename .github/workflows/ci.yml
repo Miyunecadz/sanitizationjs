@@ -48,7 +48,7 @@ jobs:
 
   build:
     runs-on: [self-hosted, linux]
-    needs: [test-and-test]
+    needs: [test-and-lint]
 
     steps:
       - name: Checkout code
