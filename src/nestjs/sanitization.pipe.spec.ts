@@ -19,11 +19,14 @@ describe('SanitizationPipe', () => {
     };
 
     mockSanitizationEngine = {
-      sanitize: jest.fn().mockImplementation((input) => ({
-        sanitized: typeof input === 'string' ? input.replace(/<[^>]*>/g, '').trim() : input,
+      sanitize: jest.fn().mockImplementation(input => ({
+        sanitized:
+          typeof input === 'string'
+            ? input.replace(/<[^>]*>/g, '').trim()
+            : input,
         violations: [],
-        appliedRules: ['html', 'trim']
-      }))
+        appliedRules: ['html', 'trim'],
+      })),
     } as any;
 
     pipe = new SanitizationPipe(mockSanitizationEngine, mockConfig);
@@ -34,35 +37,37 @@ describe('SanitizationPipe', () => {
       const input = {
         name: '<script>alert("xss")</script>John Doe',
         email: '  john@example.com  ',
-        bio: '<div>Developer</div>'
+        bio: '<div>Developer</div>',
       };
 
       mockSanitizationEngine.sanitize.mockReturnValue({
         sanitized: {
           name: 'John Doe',
           email: 'john@example.com',
-          bio: 'Developer'
+          bio: 'Developer',
         },
         violations: [],
-        appliedRules: ['html', 'trim']
+        appliedRules: ['html', 'trim'],
       });
 
       const result = await pipe.transform(input, { type: 'body' });
 
-      expect(result.name).toBe('John Doe');
-      expect(result.email).toBe('john@example.com');
-      expect(result.bio).toBe('Developer');
+      expect((result as Record<string, unknown>).name).toBe('John Doe');
+      expect((result as Record<string, unknown>).email).toBe(
+        'john@example.com'
+      );
+      expect((result as Record<string, unknown>).bio).toBe('Developer');
     });
 
     it('should handle string inputs', async () => {
       const input = '<script>alert("test")</script>Hello World';
-      
+
       mockSanitizationEngine.sanitize.mockReturnValue({
         sanitized: 'Hello World',
         violations: [],
-        appliedRules: ['html']
+        appliedRules: ['html'],
       });
-      
+
       const result = await pipe.transform(input, { type: 'body' });
 
       expect(result).toBe('Hello World');
@@ -72,24 +77,22 @@ describe('SanitizationPipe', () => {
       const input = [
         '<script>test</script>Item 1',
         '  Item 2  ',
-        { name: '<div>Item 3</div>' }
+        { name: '<div>Item 3</div>' },
       ];
 
       mockSanitizationEngine.sanitize.mockReturnValue({
-        sanitized: [
-          'Item 1',
-          'Item 2',
-          { name: 'Item 3' }
-        ],
+        sanitized: ['Item 1', 'Item 2', { name: 'Item 3' }],
         violations: [],
-        appliedRules: ['html', 'trim']
+        appliedRules: ['html', 'trim'],
       });
 
       const result = await pipe.transform(input, { type: 'body' });
 
-      expect(result[0]).toBe('Item 1');
-      expect(result[1]).toBe('Item 2');
-      expect(result[2].name).toBe('Item 3');
+      expect((result as unknown[])[0]).toBe('Item 1');
+      expect((result as unknown[])[1]).toBe('Item 2');
+      expect(((result as unknown[])[2] as { name: string }).name).toBe(
+        'Item 3'
+      );
     });
 
     it('should return null/undefined unchanged', async () => {
@@ -112,17 +115,19 @@ describe('SanitizationPipe', () => {
 
     it('should throw BadRequestException on violations', async () => {
       const input = '<script>alert("xss")</script>';
-      
+
       mockSanitizationEngine.sanitize.mockImplementation(() => {
         throw new Error('Security violation detected');
       });
 
-      await expect(pipe.transform(input, { type: 'body' })).rejects.toThrow(BadRequestException);
+      await expect(pipe.transform(input, { type: 'body' })).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it('should include error details in exception', async () => {
       const input = '<script>alert("xss")</script>';
-      
+
       mockSanitizationEngine.sanitize.mockImplementation(() => {
         throw new Error('Security violation');
       });
@@ -152,13 +157,19 @@ describe('SanitizationPipe', () => {
 
   describe('error handling', () => {
     it('should handle sanitization engine errors gracefully', async () => {
-      const input = { toString: () => { throw new Error('Test error'); } };
-      
+      const input = {
+        toString: () => {
+          throw new Error('Test error');
+        },
+      };
+
       mockSanitizationEngine.sanitize.mockImplementation(() => {
         throw new Error('Test error');
       });
 
-      await expect(pipe.transform(input, { type: 'body' })).rejects.toThrow(BadRequestException);
+      await expect(pipe.transform(input, { type: 'body' })).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 });

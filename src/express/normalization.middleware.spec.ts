@@ -37,7 +37,7 @@ describe('NormalizationMiddleware', () => {
         if (header === 'x-forwarded-for') return '127.0.0.1';
         if (header === 'set-cookie') return [];
         return undefined;
-      }) as any
+      }) as any,
     };
 
     mockRes = {
@@ -46,7 +46,7 @@ describe('NormalizationMiddleware', () => {
       locals: {},
       statusCode: 200,
       headersSent: false,
-      set: jest.fn()
+      set: jest.fn(),
     };
 
     mockNext = jest.fn();
@@ -67,8 +67,8 @@ describe('NormalizationMiddleware', () => {
           metadata: expect.objectContaining({
             requestId: expect.any(String),
             timestamp: expect.any(String),
-            version: expect.any(String)
-          })
+            version: expect.any(String),
+          }),
         })
       );
     });
@@ -84,7 +84,7 @@ describe('NormalizationMiddleware', () => {
         expect.objectContaining({
           success: true,
           data: responseData,
-          metadata: expect.any(Object)
+          metadata: expect.any(Object),
         })
       );
     });
@@ -101,8 +101,8 @@ describe('NormalizationMiddleware', () => {
           total: 50,
           totalPages: 5,
           hasNext: true,
-          hasPrev: false
-        }
+          hasPrev: false,
+        },
       };
       mockRes.json!(responseData);
 
@@ -111,7 +111,7 @@ describe('NormalizationMiddleware', () => {
           success: true,
           data: expect.any(Object),
           pagination: expect.any(Object),
-          metadata: expect.any(Object)
+          metadata: expect.any(Object),
         })
       );
     });
@@ -126,8 +126,8 @@ describe('NormalizationMiddleware', () => {
         metadata: {
           timestamp: '2025-01-01T00:00:00Z',
           requestId: 'test-123',
-          version: 'v1'
-        }
+          version: 'v1',
+        },
       };
       mockRes.json!(normalizedResponse);
 
@@ -151,9 +151,9 @@ describe('NormalizationMiddleware', () => {
             code: 'HTTP_400',
             message: 'Validation failed',
             requestId: expect.any(String),
-            timestamp: expect.any(String)
+            timestamp: expect.any(String),
           }),
-          metadata: expect.any(Object)
+          metadata: expect.any(Object),
         })
       );
     });
@@ -171,8 +171,8 @@ describe('NormalizationMiddleware', () => {
           success: false,
           error: expect.objectContaining({
             code: 'HTTP_404',
-            message: 'Not found'
-          })
+            message: 'Not found',
+          }),
         })
       );
     });
@@ -190,8 +190,8 @@ describe('NormalizationMiddleware', () => {
           success: false,
           error: expect.objectContaining({
             code: 'HTTP_500',
-            message: 'Internal server error'
-          })
+            message: 'Internal server error',
+          }),
         })
       );
     });
@@ -212,8 +212,8 @@ describe('NormalizationMiddleware', () => {
           data: responseData,
           metadata: expect.objectContaining({
             server: expect.any(String),
-            nodeVersion: expect.any(String)
-          })
+            nodeVersion: expect.any(String),
+          }),
         })
       );
     });
@@ -270,7 +270,7 @@ describe('NormalizationMiddleware', () => {
         headers: {},
         get: jest.fn().mockReturnValue(undefined),
         ip: undefined,
-        connection: { remoteAddress: undefined } as any
+        connection: { remoteAddress: undefined } as any,
       };
       const middleware = createNormalizationMiddleware(mockConfig);
       middleware(mockReq as Request, mockRes as Response, mockNext);

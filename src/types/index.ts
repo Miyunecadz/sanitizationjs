@@ -73,7 +73,7 @@ export interface ErrorResponse {
   error: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     timestamp: string;
     requestId: string;
     stack?: string;
@@ -97,8 +97,8 @@ export interface NormalizationOptions {
   includeMetadata?: boolean;
 }
 
-export interface SanitizationResult {
-  sanitized: any;
+export interface SanitizationResult<T = unknown> {
+  sanitized: T;
   violations: string[];
   appliedRules: string[];
 }
@@ -117,7 +117,7 @@ export enum SecurityViolationType {
   HTML_INJECTION = 'HTML_INJECTION',
   SCRIPT_INJECTION = 'SCRIPT_INJECTION',
   PATH_TRAVERSAL = 'PATH_TRAVERSAL',
-  COMMAND_INJECTION = 'COMMAND_INJECTION'
+  COMMAND_INJECTION = 'COMMAND_INJECTION',
 }
 
 export interface SecurityViolation {

@@ -1,10 +1,10 @@
 import { Module, Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { IsEmail, IsString, IsOptional } from 'class-validator';
-import { 
-  SanitizationModule, 
-  Sanitize, 
+import {
+  SanitizationModule,
+  Sanitize,
   Normalize,
-  DEFAULT_CONFIG 
+  DEFAULT_CONFIG,
 } from '../src';
 
 class CreateUserDto {
@@ -21,22 +21,21 @@ class CreateUserDto {
 
 @Controller('users')
 export class UsersController {
-  
   @Post()
-  @Sanitize({ 
+  @Sanitize({
     rules: ['html', 'trim', 'email-normalize'],
-    strictMode: true 
+    strictMode: true,
   })
-  @Normalize({ 
+  @Normalize({
     format: 'detailed',
-    includeLinks: true 
+    includeLinks: true,
   })
   async createUser(@Body() userData: CreateUserDto) {
     // Simulate user creation
     return {
       id: Math.floor(Math.random() * 1000),
       ...userData,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
   }
 
@@ -47,7 +46,7 @@ export class UsersController {
       id: parseInt(id),
       name: 'John Doe',
       email: 'john@example.com',
-      bio: 'Software Developer'
+      bio: 'Software Developer',
     };
   }
 }
@@ -59,15 +58,15 @@ export class UsersController {
       sanitization: {
         ...DEFAULT_CONFIG.sanitization,
         strictMode: true,
-        logViolations: true
+        logViolations: true,
       },
       normalization: {
         ...DEFAULT_CONFIG.normalization,
         format: 'standard',
-        includeMetadata: true
-      }
-    })
+        includeMetadata: true,
+      },
+    }),
   ],
-  controllers: [UsersController]
+  controllers: [UsersController],
 })
 export class AppModule {}

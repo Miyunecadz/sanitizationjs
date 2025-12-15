@@ -6,8 +6,8 @@ import { SanitizationConfig } from '../types';
 jest.mock('dompurify', () => ({
   __esModule: true,
   default: jest.fn(() => ({
-    sanitize: (html: string) => html.replace(/<[^>]*>/g, '')
-  }))
+    sanitize: (html: string) => html.replace(/<[^>]*>/g, ''),
+  })),
 }));
 
 describe('SanitizationMiddleware', () => {
@@ -31,8 +31,8 @@ describe('SanitizationMiddleware', () => {
       query: {},
       params: {},
       headers: {
-        'x-request-id': 'test-request-123'
-      }
+        'x-request-id': 'test-request-123',
+      },
     };
 
     mockRes = {
@@ -49,7 +49,7 @@ describe('SanitizationMiddleware', () => {
       mockReq.body = {
         name: '<script>alert("xss")</script>John Doe',
         email: '  john@example.com  ',
-        bio: '<div>Developer</div>'
+        bio: '<div>Developer</div>',
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -65,7 +65,7 @@ describe('SanitizationMiddleware', () => {
       mockReq.body = [
         '<script>test</script>Item 1',
         '  Item 2  ',
-        { name: '<div>Item 3</div>' }
+        { name: '<div>Item 3</div>' },
       ];
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -92,7 +92,7 @@ describe('SanitizationMiddleware', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       mockReq.query = {
         search: '<script>alert("xss")</script>test query',
-        filter: '  category  '
+        filter: '  category  ',
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -105,7 +105,7 @@ describe('SanitizationMiddleware', () => {
     it('should handle array query parameters', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       mockReq.query = {
-        tags: ['<script>tag1</script>', '  tag2  ', '<div>tag3</div>']
+        tags: ['<script>tag1</script>', '  tag2  ', '<div>tag3</div>'],
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -122,7 +122,7 @@ describe('SanitizationMiddleware', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       mockReq.params = {
         id: '<script>123</script>',
-        slug: '  test-slug  '
+        slug: '  test-slug  ',
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -142,7 +142,7 @@ describe('SanitizationMiddleware', () => {
     it('should return 400 error on violations', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       mockReq.body = {
-        content: '<script>alert("xss")</script>'
+        content: '<script>alert("xss")</script>',
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -153,8 +153,8 @@ describe('SanitizationMiddleware', () => {
           success: false,
           error: expect.objectContaining({
             code: 'SANITIZATION_ERROR',
-            message: 'Internal sanitization error'
-          })
+            message: 'Internal sanitization error',
+          }),
         })
       );
       expect(mockNext).not.toHaveBeenCalled();
@@ -163,7 +163,7 @@ describe('SanitizationMiddleware', () => {
     it('should continue processing when no violations found', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       mockReq.body = {
-        content: 'Safe content'
+        content: 'Safe content',
       };
 
       middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -182,7 +182,7 @@ describe('SanitizationMiddleware', () => {
     it('should pass through without modification when disabled', () => {
       const middleware = createSanitizationMiddleware(mockConfig);
       const originalBody = {
-        content: '<script>alert("xss")</script>'
+        content: '<script>alert("xss")</script>',
       };
       mockReq.body = { ...originalBody };
 
@@ -192,5 +192,4 @@ describe('SanitizationMiddleware', () => {
       expect(mockNext).toHaveBeenCalled();
     });
   });
-
 });

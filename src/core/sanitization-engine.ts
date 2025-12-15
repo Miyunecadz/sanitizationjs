@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import * as DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
-import { 
-  SanitizationRule, 
-  SanitizationResult, 
-  SecurityViolation, 
+import {
+  SanitizationRule,
+  SanitizationResult,
+  SecurityViolation,
   SanitizationConfig,
-  SecurityViolationType 
+  SecurityViolationType,
 } from '../types';
-import { 
-  DEFAULT_SANITIZATION_RULES, 
-  getSecurityViolationType, 
-  getViolationSeverity 
+import {
+  DEFAULT_SANITIZATION_RULES,
+  getSecurityViolationType,
+  getViolationSeverity,
 } from './sanitization-rules';
 
 @Injectable()
@@ -35,23 +35,35 @@ export class SanitizationEngine {
     });
   }
 
-  sanitize(data: any, rules: string[] = this.config.rules): SanitizationResult {
+  sanitize<T = unknown>(
+    data: T,
+    rules: string[] = this.config.rules
+  ): SanitizationResult<T> {
     const violations: SecurityViolation[] = [];
     const appliedRules: string[] = [];
     const cacheKey = rules.sort().join(',');
 
     let compiledRules = this.compiledRulesCache.get(cacheKey);
     if (!compiledRules) {
-      compiledRules = rules.map(ruleName => this.rulesCache.get(ruleName))
+      compiledRules = rules
+        .map(ruleName => this.rulesCache.get(ruleName))
         .filter(rule => rule !== undefined) as SanitizationRule[];
       this.compiledRulesCache.set(cacheKey, compiledRules);
     }
 
-    const sanitized = this.sanitizeValue(data, compiledRules, '', violations, appliedRules);
+    const sanitized = this.sanitizeValue(
+      data,
+      compiledRules,
+      '',
+      violations,
+      appliedRules
+    ) as T;
 
     if (this.config.strictMode && violations.length > 0) {
       if (this.config.rejectOnViolation) {
-        throw new Error(`Sanitization violations detected: ${violations.map(v => v.type).join(', ')}`);
+        throw new Error(
+          `Sanitization violations detected: ${violations.map(v => v.type).join(', ')}`
+        );
       }
     }
 
@@ -62,36 +74,54 @@ export class SanitizationEngine {
     return {
       sanitized,
       violations: violations.map(v => `${v.field}: ${v.type}`),
-      appliedRules
+      appliedRules,
     };
   }
 
   private sanitizeValue(
-    value: any, 
-    rules: SanitizationRule[], 
+    value: unknown,
+    rules: SanitizationRule[],
     fieldPath: string,
     violations: SecurityViolation[],
     appliedRules: string[]
-  ): any {
+  ): unknown {
     if (value === null || value === undefined) {
       return value;
     }
 
     if (typeof value === 'string') {
-      return this.sanitizeString(value, rules, fieldPath, violations, appliedRules);
+      return this.sanitizeString(
+        value,
+        rules,
+        fieldPath,
+        violations,
+        appliedRules
+      );
     }
 
     if (Array.isArray(value)) {
-      return value.map((item, index) => 
-        this.sanitizeValue(item, rules, `${fieldPath}[${index}]`, violations, appliedRules)
+      return value.map((item, index) =>
+        this.sanitizeValue(
+          item,
+          rules,
+          `${fieldPath}[${index}]`,
+          violations,
+          appliedRules
+        )
       );
     }
 
     if (typeof value === 'object') {
-      const sanitizedObj: any = {};
+      const sanitizedObj: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
         const newFieldPath = fieldPath ? `${fieldPath}.${key}` : key;
-        sanitizedObj[key] = this.sanitizeValue(val, rules, newFieldPath, violations, appliedRules);
+        sanitizedObj[key] = this.sanitizeValue(
+          val,
+          rules,
+          newFieldPath,
+          violations,
+          appliedRules
+        );
       }
       return sanitizedObj;
     }
@@ -100,8 +130,8 @@ export class SanitizationEngine {
   }
 
   private sanitizeString(
-    value: string, 
-    rules: SanitizationRule[], 
+    value: string,
+    rules: SanitizationRule[],
     fieldPath: string,
     violations: SecurityViolation[],
     appliedRules: string[]
@@ -119,7 +149,7 @@ export class SanitizationEngine {
           originalValue,
           sanitizedValue: sanitized,
           rule: rule.name,
-          severity: getViolationSeverity(violationType)
+          severity: getViolationSeverity(violationType),
         });
       }
 
@@ -131,9 +161,9 @@ export class SanitizationEngine {
       }
 
       if (rule.name === 'html' && sanitized.includes('<')) {
-        sanitized = this.purify.sanitize(sanitized, { 
+        sanitized = this.purify.sanitize(sanitized, {
           ALLOWED_TAGS: [],
-          ALLOWED_ATTR: []
+          ALLOWED_ATTR: [],
         });
       }
     }
@@ -157,8 +187,10 @@ export class SanitizationEngine {
 
   validateConfig(config: SanitizationConfig): boolean {
     const availableRules = Array.from(this.rulesCache.keys());
-    const invalidRules = config.rules.filter(rule => !availableRules.includes(rule));
-    
+    const invalidRules = config.rules.filter(
+      rule => !availableRules.includes(rule)
+    );
+
     if (invalidRules.length > 0) {
       throw new Error(`Invalid sanitization rules: ${invalidRules.join(', ')}`);
     }

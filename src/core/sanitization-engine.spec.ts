@@ -5,8 +5,8 @@ import { SanitizationConfig, SecurityViolationType } from '../types';
 jest.mock('dompurify', () => ({
   __esModule: true,
   default: jest.fn(() => ({
-    sanitize: (html: string) => html.replace(/<[^>]*>/g, '')
-  }))
+    sanitize: (html: string) => html.replace(/<[^>]*>/g, ''),
+  })),
 }));
 
 describe('SanitizationEngine', () => {
@@ -29,7 +29,7 @@ describe('SanitizationEngine', () => {
     it('should remove HTML tags from string input', () => {
       const input = '<script>alert("xss")</script>Hello World<div>test</div>';
       const result = sanitizationEngine.sanitize(input);
-      
+
       expect(result.sanitized).toBe('alert("xss")Hello Worldtest');
       expect(result.appliedRules).toContain('html');
     });
@@ -47,8 +47,8 @@ describe('SanitizationEngine', () => {
         name: '<script>alert("xss")</script>John',
         email: '  john@example.com  ',
         nested: {
-          description: '<div>Safe content</div>'
-        }
+          description: '<div>Safe content</div>',
+        },
       };
 
       const result = sanitizationEngine.sanitize(input);
@@ -62,14 +62,16 @@ describe('SanitizationEngine', () => {
       const input = [
         '<script>alert("test")</script>Item 1',
         '  Item 2  ',
-        { name: '<div>Item 3</div>' }
+        { name: '<div>Item 3</div>' },
       ];
 
       const result = sanitizationEngine.sanitize(input);
 
-      expect(result.sanitized[0]).toBe('alert("test")Item 1');
-      expect(result.sanitized[1]).toBe('Item 2');
-      expect(result.sanitized[2].name).toBe('Item 3');
+      expect((result.sanitized as unknown[])[0]).toBe('alert("test")Item 1');
+      expect((result.sanitized as unknown[])[1]).toBe('Item 2');
+      expect(
+        ((result.sanitized as unknown[])[2] as { name: string }).name
+      ).toBe('Item 3');
     });
 
     it('should detect XSS violations', () => {
@@ -101,7 +103,7 @@ describe('SanitizationEngine', () => {
 
     it('should throw error on security violations in strict mode', () => {
       const input = '<script>alert("xss")</script>';
-      
+
       expect(() => {
         sanitizationEngine.sanitize(input);
       }).toThrow();
@@ -110,12 +112,14 @@ describe('SanitizationEngine', () => {
 
   describe('with custom rules', () => {
     beforeEach(() => {
-      mockConfig.customRules = [{
-        name: 'test-rule',
-        pattern: /test/gi,
-        transform: (value: string) => value.replace(/test/gi, 'TEST'),
-        description: 'Test rule for testing'
-      }];
+      mockConfig.customRules = [
+        {
+          name: 'test-rule',
+          pattern: /test/gi,
+          transform: (value: string) => value.replace(/test/gi, 'TEST'),
+          description: 'Test rule for testing',
+        },
+      ];
       mockConfig.rules = ['test-rule']; // Only use custom rule
       sanitizationEngine = new SanitizationEngine(mockConfig);
     });

@@ -3,30 +3,32 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-  Inject
+  Inject,
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { NormalizationEngine } from '../core/normalization-engine';
-import { 
-  NormalizationConfig, 
-  NormalizationOptions, 
+import {
+  NormalizationConfig,
+  NormalizationOptions,
   RequestContext,
   SuccessResponse,
-  ErrorResponse
+  ErrorResponse,
+  PaginationMeta,
 } from '../types';
-import { 
-  NORMALIZATION_CONFIG_TOKEN, 
-  NORMALIZATION_OPTIONS_METADATA 
+import {
+  NORMALIZATION_CONFIG_TOKEN,
+  NORMALIZATION_OPTIONS_METADATA,
 } from './constants';
 
 @Injectable()
 export class NormalizationInterceptor implements NestInterceptor {
   constructor(
     private readonly normalizationEngine: NormalizationEngine,
-    @Inject(NORMALIZATION_CONFIG_TOKEN) private readonly config: NormalizationConfig,
+    @Inject(NORMALIZATION_CONFIG_TOKEN)
+    private readonly config: NormalizationConfig,
     private readonly reflector: Reflector
   ) {}
 
@@ -38,10 +40,11 @@ export class NormalizationInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest<Request>();
     const requestContext = this.createRequestContext(request);
 
-    const options = this.reflector.get<NormalizationOptions>(
-      NORMALIZATION_OPTIONS_METADATA,
-      context.getHandler()
-    ) || {};
+    const options =
+      this.reflector.get<NormalizationOptions>(
+        NORMALIZATION_OPTIONS_METADATA,
+        context.getHandler()
+      ) || {};
 
     return next.handle().pipe(
       map(data => this.handleSuccess(data, requestContext, options)),
@@ -58,23 +61,23 @@ export class NormalizationInterceptor implements NestInterceptor {
       timestamp: new Date(),
       startTime: Date.now(),
       userAgent: request.get('User-Agent'),
-      ip: this.extractClientIp(request)
+      ip: this.extractClientIp(request),
     };
   }
 
   private extractRequestId(request: Request): string {
     return (
-      request.headers['x-request-id'] as string ||
-      request.headers['x-correlation-id'] as string ||
-      request.headers['x-trace-id'] as string ||
+      (request.headers['x-request-id'] as string) ||
+      (request.headers['x-correlation-id'] as string) ||
+      (request.headers['x-trace-id'] as string) ||
       this.normalizationEngine.createRequestContext().requestId
     );
   }
 
   private extractClientIp(request: Request): string {
     return (
-      request.headers['x-forwarded-for'] as string ||
-      request.headers['x-real-ip'] as string ||
+      (request.headers['x-forwarded-for'] as string) ||
+      (request.headers['x-real-ip'] as string) ||
       request.connection.remoteAddress ||
       request.socket.remoteAddress ||
       (request.connection as any)?.socket?.remoteAddress ||
@@ -83,16 +86,20 @@ export class NormalizationInterceptor implements NestInterceptor {
   }
 
   private handleSuccess(
-    data: any, 
-    context: RequestContext, 
+    data: unknown,
+    context: RequestContext,
     options: NormalizationOptions
-  ): SuccessResponse<any> {
+  ): SuccessResponse<unknown> {
     if (this.isAlreadyNormalized(data)) {
-      return data;
+      return data as SuccessResponse<unknown>;
     }
 
     const pagination = this.extractPagination(data);
-    const actualData = pagination ? data.data || data.items || data : data;
+    const actualData = pagination
+      ? (data as Record<string, unknown>).data ||
+        (data as Record<string, unknown>).items ||
+        data
+      : data;
 
     return this.normalizationEngine.normalizeSuccess(
       actualData,
@@ -102,23 +109,27 @@ export class NormalizationInterceptor implements NestInterceptor {
   }
 
   private handleError(
-    error: any, 
-    context: RequestContext, 
+    error: unknown,
+    context: RequestContext,
     options: NormalizationOptions
   ): ErrorResponse {
     if (this.isAlreadyNormalized(error)) {
-      return error;
+      return error as ErrorResponse;
     }
 
     let code: string | undefined;
-    let details: any;
+    let details: unknown;
 
-    if (error.response) {
-      code = error.response.code || error.response.error?.code;
-      details = error.response.details || error.response.message;
-    } else if (error.code) {
-      code = error.code;
-      details = error.details;
+    const errorObj = error as Record<string, unknown>;
+    if (errorObj.response) {
+      const response = errorObj.response as Record<string, unknown>;
+      code =
+        (response.code as string) ||
+        ((response.error as Record<string, unknown>)?.code as string);
+      details = response.details || response.message;
+    } else if (errorObj.code) {
+      code = errorObj.code as string;
+      details = errorObj.details;
     }
 
     return this.normalizationEngine.normalizeError(
@@ -129,35 +140,48 @@ export class NormalizationInterceptor implements NestInterceptor {
     );
   }
 
-  private isAlreadyNormalized(data: any): boolean {
-    return data && 
-           typeof data === 'object' && 
-           'success' in data && 
-           'metadata' in data &&
-           'requestId' in (data.metadata || {});
+  private isAlreadyNormalized(data: unknown): boolean {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+    const dataObj = data as Record<string, unknown>;
+    return (
+      'success' in dataObj &&
+      'metadata' in dataObj &&
+      typeof dataObj.metadata === 'object' &&
+      dataObj.metadata !== null &&
+      'requestId' in (dataObj.metadata as Record<string, unknown>)
+    );
   }
 
-  private extractPagination(data: any): any {
+  private extractPagination(data: unknown): PaginationMeta | undefined {
     if (!data || typeof data !== 'object') {
       return undefined;
     }
 
-    if (data.pagination) {
-      return data.pagination;
+    const dataObj = data as Record<string, unknown>;
+
+    if (dataObj.pagination) {
+      return dataObj.pagination as PaginationMeta;
     }
 
-    const hasPageInfo = data.page !== undefined || 
-                       data.limit !== undefined || 
-                       data.total !== undefined;
+    const hasPageInfo =
+      dataObj.page !== undefined ||
+      dataObj.limit !== undefined ||
+      dataObj.total !== undefined;
 
     if (hasPageInfo) {
       return {
-        page: data.page || 1,
-        limit: data.limit || 10,
-        total: data.total || 0,
-        totalPages: data.totalPages || Math.ceil((data.total || 0) / (data.limit || 10)),
-        hasNext: data.hasNext || false,
-        hasPrev: data.hasPrev || false
+        page: (dataObj.page as number) || 1,
+        limit: (dataObj.limit as number) || 10,
+        total: (dataObj.total as number) || 0,
+        totalPages:
+          (dataObj.totalPages as number) ||
+          Math.ceil(
+            ((dataObj.total as number) || 0) / ((dataObj.limit as number) || 10)
+          ),
+        hasNext: (dataObj.hasNext as boolean) || false,
+        hasPrev: (dataObj.hasPrev as boolean) || false,
       };
     }
 

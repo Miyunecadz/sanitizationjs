@@ -22,7 +22,7 @@ describe('NormalizationEngine', () => {
       timestamp: new Date('2025-01-01T00:00:00Z'),
       startTime: Date.now(),
       userAgent: 'test-agent',
-      ip: '127.0.0.1'
+      ip: '127.0.0.1',
     };
 
     normalizationEngine = new NormalizationEngine(mockConfig);
@@ -49,10 +49,14 @@ describe('NormalizationEngine', () => {
         total: 50,
         totalPages: 5,
         hasNext: true,
-        hasPrev: false
+        hasPrev: false,
       };
 
-      const result = normalizationEngine.normalizeSuccess(data, mockContext, pagination);
+      const result = normalizationEngine.normalizeSuccess(
+        data,
+        mockContext,
+        pagination
+      );
 
       expect(result.pagination).toEqual(pagination);
     });
@@ -87,7 +91,11 @@ describe('NormalizationEngine', () => {
   describe('normalizeError', () => {
     it('should normalize error response with standard format', () => {
       const error = new Error('Test error');
-      const result = normalizationEngine.normalizeError(error, mockContext, 'VALIDATION_ERROR');
+      const result = normalizationEngine.normalizeError(
+        error,
+        mockContext,
+        'VALIDATION_ERROR'
+      );
 
       expect(result.success).toBe(false);
       expect(result.error.code).toBe('VALIDATION_ERROR');
@@ -102,7 +110,11 @@ describe('NormalizationEngine', () => {
       normalizationEngine = new NormalizationEngine(mockConfig);
 
       const error = new Error('Test error');
-      const result = normalizationEngine.normalizeError(error, mockContext, 'TEST_ERROR');
+      const result = normalizationEngine.normalizeError(
+        error,
+        mockContext,
+        'TEST_ERROR'
+      );
 
       expect(result.error.stack).toBeDefined();
     });
@@ -112,7 +124,11 @@ describe('NormalizationEngine', () => {
       normalizationEngine = new NormalizationEngine(mockConfig);
 
       const error = new Error('Test error');
-      const result = normalizationEngine.normalizeError(error, mockContext, 'VALIDATION_ERROR');
+      const result = normalizationEngine.normalizeError(
+        error,
+        mockContext,
+        'VALIDATION_ERROR'
+      );
 
       expect(result.error.helpUrl).toBeDefined();
       expect(result.error.possibleCauses).toBeDefined();
@@ -124,7 +140,11 @@ describe('NormalizationEngine', () => {
       normalizationEngine = new NormalizationEngine(mockConfig);
 
       const error = new Error('Test error');
-      const result = normalizationEngine.normalizeError(error, mockContext, 'TEST_ERROR');
+      const result = normalizationEngine.normalizeError(
+        error,
+        mockContext,
+        'TEST_ERROR'
+      );
 
       expect(result.error.code).toBe('TEST_ERROR');
       expect(result.error.message).toBe('Test error');
@@ -133,7 +153,11 @@ describe('NormalizationEngine', () => {
 
     it('should handle non-Error objects', () => {
       const errorString = 'String error';
-      const result = normalizationEngine.normalizeError(errorString, mockContext, 'STRING_ERROR');
+      const result = normalizationEngine.normalizeError(
+        errorString,
+        mockContext,
+        'STRING_ERROR'
+      );
 
       expect(result.error.message).toBe('String error');
       expect(result.error.code).toBe('STRING_ERROR');
@@ -160,16 +184,22 @@ describe('NormalizationEngine', () => {
 
   describe('createMetadata', () => {
     it('should create metadata with processing time', () => {
-      const result = normalizationEngine.normalizeSuccess({ test: 'data' }, mockContext);
-      
+      const result = normalizationEngine.normalizeSuccess(
+        { test: 'data' },
+        mockContext
+      );
+
       expect(result.metadata.processingTime).toBeDefined();
       expect(typeof result.metadata.processingTime).toBe('number');
       expect(result.metadata.processingTime).toBeGreaterThanOrEqual(0);
     });
 
     it('should include version information', () => {
-      const result = normalizationEngine.normalizeSuccess({ test: 'data' }, mockContext);
-      
+      const result = normalizationEngine.normalizeSuccess(
+        { test: 'data' },
+        mockContext
+      );
+
       expect(result.metadata.version).toBeDefined();
       expect(typeof result.metadata.version).toBe('string');
     });

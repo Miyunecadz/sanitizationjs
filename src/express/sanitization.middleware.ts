@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { SanitizationEngine } from "../core/sanitization-engine";
-import { SanitizationConfig, RequestContext } from "../types";
+import { Request, Response, NextFunction } from 'express';
+import { SanitizationEngine } from '../core/sanitization-engine';
+import { SanitizationConfig, RequestContext, SanitizationRule } from '../types';
 
 export interface ExpressSanitizationOptions {
   sanitizeBody?: boolean;
@@ -63,7 +63,7 @@ export function createSanitizationMiddleware(
       }
 
       if (sanitizeHeaders && req.headers) {
-        const sensitiveHeaders = ["authorization", "cookie", "set-cookie"];
+        const sensitiveHeaders = ['authorization', 'cookie', 'set-cookie'];
         const headersToSanitize = Object.fromEntries(
           Object.entries(req.headers).filter(
             ([key]) => !sensitiveHeaders.includes(key.toLowerCase())
@@ -87,11 +87,11 @@ export function createSanitizationMiddleware(
           return res.status(400).json({
             success: false,
             error: {
-              code: "SANITIZATION_VIOLATION",
-              message: "Input validation failed",
+              code: 'SANITIZATION_VIOLATION',
+              message: 'Input validation failed',
               violations: allViolations,
               timestamp: new Date().toISOString(),
-              requestId: req.headers["x-request-id"] || "unknown",
+              requestId: req.headers['x-request-id'] || 'unknown',
             },
           });
         }
@@ -103,10 +103,10 @@ export function createSanitizationMiddleware(
         return res.status(500).json({
           success: false,
           error: {
-            code: "SANITIZATION_ERROR",
-            message: "Internal sanitization error",
+            code: 'SANITIZATION_ERROR',
+            message: 'Internal sanitization error',
             timestamp: new Date().toISOString(),
-            requestId: req.headers["x-request-id"] || "unknown",
+            requestId: req.headers['x-request-id'] || 'unknown',
           },
         });
       }
@@ -135,7 +135,7 @@ export class ExpressSanitizationMiddleware {
     this.sanitizationEngine = new SanitizationEngine(this.config);
   }
 
-  addCustomRule(rule: any) {
+  addCustomRule(rule: SanitizationRule) {
     this.sanitizationEngine.addCustomRule(rule);
   }
 }

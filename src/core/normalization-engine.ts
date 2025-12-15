@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  SuccessResponse, 
-  ErrorResponse, 
-  ResponseMetadata, 
+import {
+  SuccessResponse,
+  ErrorResponse,
+  ResponseMetadata,
   PaginationMeta,
   NormalizationConfig,
-  RequestContext
+  RequestContext,
 } from '../types';
 
 @Injectable()
@@ -14,16 +14,16 @@ export class NormalizationEngine {
   constructor(private readonly config: NormalizationConfig) {}
 
   normalizeSuccess<T>(
-    data: T, 
+    data: T,
     context: RequestContext,
     pagination?: PaginationMeta
   ): SuccessResponse<T> {
     const metadata = this.createMetadata(context);
-    
+
     const response: SuccessResponse<T> = {
       success: true,
       data,
-      metadata
+      metadata,
     };
 
     if (pagination) {
@@ -34,10 +34,10 @@ export class NormalizationEngine {
   }
 
   normalizeError(
-    error: Error | string | any,
+    error: Error | string | unknown,
     context: RequestContext,
     code?: string,
-    details?: any
+    details?: unknown
   ): ErrorResponse {
     const metadata = this.createMetadata(context);
     const timestamp = new Date().toISOString();
@@ -54,8 +54,10 @@ export class NormalizationEngine {
       errorMessage = error;
       errorCode = code || 'VALIDATION_ERROR';
     } else {
-      errorMessage = error?.message || 'An unexpected error occurred';
-      errorCode = code || error?.code || 'UNKNOWN_ERROR';
+      const errorObj = error as Record<string, unknown>;
+      errorMessage =
+        (errorObj?.message as string) || 'An unexpected error occurred';
+      errorCode = code || (errorObj?.code as string) || 'UNKNOWN_ERROR';
     }
 
     const response: ErrorResponse = {
@@ -66,21 +68,23 @@ export class NormalizationEngine {
         details: this.sanitizeErrorDetails(details),
         timestamp,
         requestId: context.requestId,
-        ...(stack && { stack })
+        ...(stack && { stack }),
       },
-      metadata
+      metadata,
     };
 
     return this.applyErrorFormatting(response);
   }
 
   private createMetadata(context: RequestContext): ResponseMetadata {
-    const processingTime = context.startTime ? Date.now() - context.startTime : undefined;
+    const processingTime = context.startTime
+      ? Date.now() - context.startTime
+      : undefined;
 
     const metadata: ResponseMetadata = {
       timestamp: new Date().toISOString(),
       requestId: context.requestId,
-      version: 'v1'
+      version: 'v1',
     };
 
     if (this.config.includeMetadata && processingTime !== undefined) {
@@ -97,7 +101,7 @@ export class NormalizationEngine {
       total: Math.max(0, pagination.total),
       totalPages: Math.max(1, Math.ceil(pagination.total / pagination.limit)),
       hasNext: pagination.page < Math.ceil(pagination.total / pagination.limit),
-      hasPrev: pagination.page > 1
+      hasPrev: pagination.page > 1,
     };
 
     if (this.config.includeLinks && pagination.links) {
@@ -112,7 +116,7 @@ export class NormalizationEngine {
       case 'minimal':
         return {
           success: response.success,
-          data: response.data
+          data: response.data,
         } as SuccessResponse<T>;
 
       case 'detailed':
@@ -121,8 +125,8 @@ export class NormalizationEngine {
           metadata: {
             ...response.metadata,
             server: process.env.NODE_ENV || 'development',
-            nodeVersion: process.version
-          }
+            nodeVersion: process.version,
+          },
         };
 
       case 'standard':
@@ -140,9 +144,9 @@ export class NormalizationEngine {
             code: response.error.code,
             message: response.error.message,
             timestamp: response.error.timestamp,
-            requestId: response.error.requestId
+            requestId: response.error.requestId,
           },
-          metadata: response.metadata
+          metadata: response.metadata,
         };
 
       case 'detailed':
@@ -151,13 +155,13 @@ export class NormalizationEngine {
           error: {
             ...response.error,
             helpUrl: this.generateHelpUrl(response.error.code),
-            possibleCauses: this.getPossibleCauses(response.error.code)
+            possibleCauses: this.getPossibleCauses(response.error.code),
           },
           metadata: {
             ...response.metadata,
             server: process.env.NODE_ENV || 'development',
-            nodeVersion: process.version
-          }
+            nodeVersion: process.version,
+          },
         };
 
       case 'standard':
@@ -166,7 +170,7 @@ export class NormalizationEngine {
     }
   }
 
-  private sanitizeErrorDetails(details: any): any {
+  private sanitizeErrorDetails(details: unknown): unknown {
     if (!details) return undefined;
 
     if (typeof details === 'string') return details;
@@ -176,7 +180,7 @@ export class NormalizationEngine {
     }
 
     if (typeof details === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(details)) {
         if (this.isSensitiveField(key)) {
           sanitized[key] = '[REDACTED]';
@@ -202,10 +206,10 @@ export class NormalizationEngine {
       'ssn',
       'social',
       'credit',
-      'card'
+      'card',
     ];
 
-    return sensitiveFields.some(field => 
+    return sensitiveFields.some(field =>
       fieldName.toLowerCase().includes(field)
     );
   }
@@ -217,26 +221,26 @@ export class NormalizationEngine {
 
   private getPossibleCauses(errorCode: string): string[] {
     const causesMap: Record<string, string[]> = {
-      'VALIDATION_ERROR': [
+      VALIDATION_ERROR: [
         'Invalid input format',
         'Missing required fields',
-        'Field length constraints violated'
+        'Field length constraints violated',
       ],
-      'AUTHENTICATION_ERROR': [
+      AUTHENTICATION_ERROR: [
         'Invalid credentials',
         'Expired token',
-        'Insufficient permissions'
+        'Insufficient permissions',
       ],
-      'NOT_FOUND': [
+      NOT_FOUND: [
         'Resource does not exist',
         'Incorrect resource ID',
-        'Resource has been deleted'
+        'Resource has been deleted',
       ],
-      'INTERNAL_ERROR': [
+      INTERNAL_ERROR: [
         'Server configuration issue',
         'Database connection problem',
-        'Third-party service unavailable'
-      ]
+        'Third-party service unavailable',
+      ],
     };
 
     return causesMap[errorCode] || ['Unknown error cause'];
@@ -246,7 +250,7 @@ export class NormalizationEngine {
     return {
       requestId: requestId || uuidv4(),
       timestamp: new Date(),
-      startTime: Date.now()
+      startTime: Date.now(),
     };
   }
 
